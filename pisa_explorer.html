@@ -1,0 +1,1099 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PISA Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#f4f6fb; --card:#ffffff; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0;
+  --brand:#1d4ed8; --brand-soft:#dbeafe; --accent:#f59e0b; --good:#15803d; --bad:#b91c1c;
+  --sel:#fff7ed;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Sarabun',system-ui,sans-serif;font-size:15px;line-height:1.55}
+header{background:linear-gradient(120deg,#1e3a8a,#1d4ed8 60%,#0ea5e9);color:#fff;padding:18px 16px}
+.wrap{max-width:1240px;margin:0 auto;padding:0 16px}
+.hrow{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+h1{margin:0;font-size:1.55rem;font-weight:700}
+.sub{opacity:.9;font-size:.95rem;margin-top:2px}
+.hbtns{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.lang{display:inline-flex;background:rgba(255,255,255,.15);border-radius:999px;padding:3px}
+.lang button{border:0;background:transparent;color:#fff;padding:6px 14px;border-radius:999px;font:inherit;font-weight:600;cursor:pointer}
+.lang button.on{background:#fff;color:var(--brand)}
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);padding:8px 14px;border-radius:10px;font:inherit;font-weight:600;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.btn:hover{border-color:var(--brand);color:var(--brand)}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn.primary:hover{background:#1e40af;color:#fff}
+.btn.green{background:#15803d;border-color:#15803d;color:#fff}
+.btn.green:hover{background:#166534;color:#fff}
+.btn.ghost-w{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.4);color:#fff}
+.btn.sm{padding:5px 10px;font-size:.85rem;border-radius:8px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+main{padding:20px 0 40px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:18px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.card h2{margin:0 0 4px;font-size:1.2rem}
+.muted{color:var(--muted)}
+.small{font-size:.86rem}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:12px}
+.stat{background:var(--brand-soft);border-radius:12px;padding:10px 12px}
+.stat b{display:block;font-size:1.35rem;color:var(--brand)}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:12px 0}
+select,input[type=number],input[type=text]{font:inherit;border:1px solid var(--line);border-radius:9px;padding:7px 10px;background:#fff;color:var(--ink)}
+.tbl-wrap{overflow:auto;border:1px solid var(--line);border-radius:12px}
+.rank-wrap{max-height:560px}
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{background:#f8fafc;position:sticky;top:0;z-index:1;font-weight:700}
+th.l,td.l{text-align:left}
+th.sortable{cursor:pointer}
+th.sortable:hover{color:var(--brand)}
+th.sorted{color:var(--brand)}
+tbody tr:hover{background:#f8fafc}
+tr.is-sel{background:var(--sel)!important}
+tr.oecd{font-weight:700;background:#eef2ff}
+.rank-tbl tbody tr{cursor:pointer}
+.medal{display:inline-block;min-width:26px;text-align:center;border-radius:6px;padding:0 4px;font-weight:700}
+.m1{background:#fde68a}.m2{background:#e5e7eb}.m3{background:#fed7aa}
+.pos{color:var(--good);font-weight:600}.neg{color:var(--bad);font-weight:600}
+.best{background:#dcfce7;font-weight:700}
+.dim{background:#f1f5f9;font-weight:700;text-align:left;vertical-align:top}
+.picker{position:relative;max-width:560px}
+.picker input{width:100%;padding:11px 14px;font-size:1rem;border-radius:12px;border:2px solid var(--brand-soft)}
+.picker input:focus{outline:none;border-color:var(--brand)}
+.dd{position:absolute;left:0;right:0;top:100%;margin-top:4px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 30px rgba(15,23,42,.15);max-height:320px;overflow:auto;z-index:20;display:none}
+.dd.show{display:block}
+.dd .it{padding:8px 12px;display:flex;justify-content:space-between;gap:10px;cursor:pointer;align-items:center}
+.dd .it.act,.dd .it:hover{background:var(--brand-soft)}
+.dd .it .nm small{display:block;color:var(--muted);font-size:.8rem}
+.dd .it.picked{opacity:.5}
+.badge{font-size:.72rem;padding:2px 8px;border-radius:999px;white-space:nowrap;font-weight:600}
+.b-ok{background:#dcfce7;color:#166534}.b-old{background:#fef3c7;color:#92400e}.b-no{background:#f1f5f9;color:#64748b}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.chip{background:var(--brand-soft);color:#1e3a8a;border-radius:999px;padding:5px 6px 5px 12px;display:inline-flex;gap:6px;align-items:center;font-weight:600}
+.chip button{border:0;background:#fff;border-radius:50%;width:22px;height:22px;cursor:pointer;color:#1e3a8a;font-weight:700;line-height:1}
+.desc{background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-top:14px}
+.desc h3{margin:0 0 6px;font-size:1rem}
+.desc ul{margin:6px 0;padding-left:20px}
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(520px,1fr));gap:16px}
+@media (max-width:620px){.charts{grid-template-columns:1fr}}
+.cc{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;min-width:0}
+.cc.wide{grid-column:1/-1}
+.cc h3{margin:0;font-size:1.02rem}
+.cc p{margin:2px 0 8px;color:var(--muted);font-size:.86rem}
+.cc-ctrl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px;font-size:.88rem}
+.cc-ctrl select,.cc-ctrl input{padding:5px 8px;font-size:.88rem}
+.cc-ctrl input[type=number]{width:70px}
+.cc-body{position:relative;height:360px}
+.hidden{display:none!important}
+.empty{padding:30px;text-align:center;color:var(--muted)}
+.note{font-size:.82rem;color:var(--muted);margin-top:10px}
+footer{text-align:center;color:var(--muted);font-size:.82rem;padding:10px 16px 30px}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap hrow">
+    <div>
+      <h1 id="tTitle"></h1>
+      <div class="sub" id="tSub"></div>
+    </div>
+    <div class="hbtns">
+      <div class="lang" role="group" aria-label="language">
+        <button id="lnTh" class="on">ไทย</button>
+        <button id="lnEn">English</button>
+      </div>
+      <button class="btn ghost-w" id="btnReset">⟲ <span id="tReset"></span></button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- Ranking -->
+  <section class="card" id="secRank">
+    <h2 id="tRankH"></h2>
+    <div class="muted small" id="tRankSub"></div>
+    <div class="stats" id="stats"></div>
+    <div class="toolbar">
+      <label><span id="tSortBy"></span>
+        <select id="sortSel"></select>
+      </label>
+      <span class="muted small" id="tRankHint"></span>
+    </div>
+    <div class="tbl-wrap rank-wrap"><table class="rank-tbl" id="rankTbl"></table></div>
+    <div class="note" id="tRankNote"></div>
+  </section>
+
+  <!-- Selector -->
+  <section class="card" id="secPick">
+    <h2 id="tPickH"></h2>
+    <div class="muted small" id="tPickSub"></div>
+    <div class="toolbar">
+      <div class="picker" style="flex:1;min-width:260px">
+        <input type="text" id="q" autocomplete="off">
+        <div class="dd" id="dd"></div>
+      </div>
+      <button class="btn sm" id="btnClear"></button>
+    </div>
+    <div class="chips" id="chips"></div>
+  </section>
+
+  <!-- Import / update data -->
+  <section class="card" id="secImport">
+    <h2 id="tImpH"></h2>
+    <div class="muted small" id="tImpSub"></div>
+    <div class="toolbar">
+      <button class="btn primary" id="btnImport">⬆ <span id="tImpBtn"></span></button>
+      <input type="file" id="fileIn" accept=".xlsx,.xls,.csv" class="hidden">
+      <button class="btn" id="btnTemplate">⬇ <span id="tTplBtn"></span></button>
+      <button class="btn sm" id="btnClearImp"></button>
+    </div>
+    <div class="desc small" id="impInfo"></div>
+  </section>
+
+  <!-- Table -->
+  <section class="card hidden" id="secTable">
+    <div class="hrow">
+      <div>
+        <h2 id="tTblH"></h2>
+        <div class="muted small" id="tTblSub"></div>
+      </div>
+      <div class="hbtns">
+        <button class="btn green" id="btnXlsx">⬇ <span id="tXlsx"></span></button>
+        <button class="btn primary" id="btnCharts">📊 <span id="tCharts"></span></button>
+      </div>
+    </div>
+    <div class="tbl-wrap" style="margin-top:12px"><table id="cmpTbl"></table></div>
+    <div class="desc" id="tblDesc"></div>
+  </section>
+
+  <!-- Charts -->
+  <section class="card hidden" id="secCharts">
+    <h2 id="tChH"></h2>
+    <div class="muted small" id="tChSub"></div>
+    <div class="charts" id="charts" style="margin-top:14px"></div>
+  </section>
+</main>
+<footer id="tFoot"></footer>
+
+<script>
+/* =====================================================================
+   1) DATA — PISA mean scores [Mathematics, Reading, Science]
+   Order per code: [2025, 2022, 2018]; null = not participating / not reported
+   Source: OECD PISA 2025 Results (Vol. I, released 8 Sep 2026),
+           PISA 2022 Results (Vol. I), PISA 2018 Results (Vol. I)
+   ===================================================================== */
+const BASE_YEARS = [2025, 2022, 2018];          // order of the arrays in RAW
+const BASE_OECD = {2025:[463,461,482], 2022:[472,476,485], 2018:[489,487,489]};
+/* Working data (base + imported): DATA[code][year] = [math, read, sci] */
+let DATA = {}, OECD_AVG = {}, YEARS = [], LATEST = 2025, PREV = 2022, IMPORTED = [], CAUTION = {};
+const RAW = {
+ CN:[[612,527,597],null,[591,555,590]],
+ SG:[[563,535,560],[575,543,561],[569,549,551]],
+ MO:[[549,501,541],[552,510,543],[558,525,544]],
+ TW:[[546,508,540],[547,515,537],[531,503,516]],
+ JP:[[525,503,538],[536,516,547],[527,504,529]],
+ EE:[[508,499,527],[510,511,526],[523,523,530]],
+ KR:[[522,501,526],[527,515,528],[526,514,519]],
+ GB:[[488,494,511],[489,494,500],[502,504,505]],
+ CA:[[485,490,510],[497,507,515],[512,520,518]],
+ NZ:[[480,497,509],[479,501,504],[494,506,508]],
+ AU:[[478,491,509],[487,498,507],[491,503,503]],
+ FI:[[469,474,504],[484,490,511],[507,520,522]],
+ US:[[463,490,502],[465,504,499],[478,505,502]],
+ CH:[[499,470,501],[508,483,503],[515,484,495]],
+ IE:[[480,500,500],[492,516,504],[500,518,496]],
+ AT:[[477,467,497],[487,480,491],[499,484,490]],
+ HK:[[522,480,496],[540,500,520],[551,524,517]],
+ PL:[[484,482,495],[489,489,499],[516,512,511]],
+ TR:[[462,472,494],[453,456,476],[454,466,468]],
+ CZ:[[477,468,490],[487,489,498],[499,490,497]],
+ BE:[[480,466,490],[489,479,491],[508,493,499]],
+ LT:[[470,464,488],[475,472,484],[481,476,482]],
+ DE:[[464,465,486],[475,480,492],[500,498,503]],
+ NL:[[483,441,485],[493,459,488],[519,485,503]],
+ SE:[[464,466,485],[482,487,494],[502,506,499]],
+ SI:[[460,445,484],[485,469,500],[509,495,507]],
+ FR:[[458,456,483],[474,474,487],[495,493,493]],
+ IT:[[468,474,483],[471,482,477],[487,476,468]],
+ PT:[[460,462,482],[472,477,484],[492,492,492]],
+ HU:[[459,452,480],[473,473,486],[481,476,481]],
+ DK:[[471,460,478],[489,489,494],[509,501,493]],
+ ES:[[457,451,477],[473,474,485],[481,null,483]],
+ HR:[[455,453,476],[463,475,483],[464,479,472]],
+ SK:[[469,448,475],[464,447,462],[486,458,464]],
+ LU:[[458,443,474],null,[483,470,477]],
+ NO:[[452,453,470],[468,477,478],[501,499,490]],
+ LV:[[460,430,468],[483,475,494],[496,479,487]],
+ AE:[[453,433,458],[431,417,432],[435,432,434]],
+ VN:[[443,392,457],[469,462,472],null],
+ MT:[[439,415,453],[466,445,466],[472,448,457]],
+ UA:[[431,418,448],[441,428,450],[453,466,469]],
+ UY:[[405,423,445],[409,430,435],[418,427,426]],
+ CL:[[403,436,442],[412,448,444],[417,452,444]],
+ IL:[[433,436,442],[458,474,465],[463,470,462]],
+ IS:[[450,422,441],[459,436,447],[495,474,475]],
+ BN:[[435,426,439],[442,429,446],[430,408,431]],
+ MU:[[407,405,438],null,null],
+ UZ:[[null,null,438],[364,336,355],null],
+ ME:[[411,418,435],[406,405,403],[430,421,415]],
+ AL:[[433,408,435],[368,358,376],[437,405,417]],
+ QA:[[416,418,434],[414,419,432],[414,407,419]],
+ GR:[[424,423,434],[430,438,441],[451,457,452]],
+ TH:[[407,392,432],[394,379,409],[419,393,426]],
+ RS:[[417,415,429],[440,440,447],[448,439,440]],
+ RO:[[419,413,425],[428,428,428],[430,428,426]],
+ MN:[[419,374,424],[425,378,412],null],
+ CR:[[387,416,424],[385,415,411],[402,426,416]],
+ GE:[[416,384,422],[390,374,384],[398,380,383]],
+ MD:[[410,404,422],[414,411,417],[421,424,428]],
+ BG:[[405,387,421],[417,404,421],[436,420,424]],
+ KZ:[[414,385,420],[425,386,423],[423,387,397]],
+ MY:[[397,393,419],[409,388,416],[440,415,438]],
+ CO:[[381,399,414],[383,409,411],[391,412,413]],
+ MX:[[388,408,414],[395,415,410],[409,420,419]],
+ SA:[[390,387,413],[389,383,390],[373,399,386]],
+ CY:[[412,379,411],[418,381,411],[451,424,439]],
+ AZ:[[422,374,409],[397,365,380],[420,389,398]],
+ BR:[[377,408,409],[379,410,403],[384,413,404]],
+ JO:[[388,363,407],[361,342,375],[400,419,429]],
+ PE:[[382,390,406],[391,408,408],[400,401,404]],
+ EC:[[366,385,393],null,null],
+ AR:[[367,389,393],[378,401,406],[379,402,404]],
+ ID:[[364,365,389],[366,359,383],[379,371,396]],
+ SV:[[346,366,385],[343,365,373],null],
+ KH:[[366,347,382],[336,329,347],null],
+ MK:[[380,357,378],[389,359,380],[394,393,413]],
+ PH:[[371,367,373],[355,347,356],[353,340,357]],
+ LB:[[377,331,372],null,[393,353,384]],
+ AM:[[376,348,369],null,null],
+ KG:[[364,344,363],null,null],
+ DO:[[339,346,361],[339,351,360],[325,342,336]],
+ PS:[[354,350,359],[366,349,369],null],
+ MA:[[355,321,358],[365,339,365],[368,359,377]],
+ XK:[[350,340,357],[355,342,357],[366,353,365]],
+ PY:[[334,352,355],[338,373,368],null],
+ IQ:[[339,312,352],null,null],
+ GT:[[334,337,351],[344,374,373],null],
+ ZM:[[314,325,337],null,null],
+ KE:[[326,320,335],null,null],
+ TJ:[[382,368,334],null,null],
+ RW:[[312,301,317],null,null],
+ JM:[null,[377,410,403],null],
+ PA:[null,[357,392,388],[353,377,365]],
+ RU:[null,null,[488,479,478]],
+ BY:[null,null,[472,474,471]],
+ BA:[null,null,[406,403,398]]
+};
+const BASE_CAUTION = {2025:['AL','CA','NL','NZ','NO','US']};
+const STORE_KEY = 'pisa_explorer_imports_v1';
+
+/* Build working dataset = embedded base data + imported rows (kept in this browser) */
+function rebuildData(){
+  DATA = {}; OECD_AVG = {};
+  for(const c in RAW) RAW[c].forEach((v,k)=>{ if(v){ (DATA[c]=DATA[c]||{})[BASE_YEARS[k]] = v.slice(); } });
+  for(const y in BASE_OECD) OECD_AVG[y] = BASE_OECD[y].slice();
+  CAUTION = {}; for(const y in BASE_CAUTION) CAUTION[y] = BASE_CAUTION[y].slice();
+  const oecdGiven = {};
+  for(const r of IMPORTED){
+    if(r.code==='OECD'){ OECD_AVG[r.year] = r.v.slice(); oecdGiven[r.year]=true; continue; }
+    (DATA[r.code]=DATA[r.code]||{})[r.year] = r.v.slice();
+    if(r.caution){ (CAUTION[r.year]=CAUTION[r.year]||[]); if(!CAUTION[r.year].includes(r.code)) CAUTION[r.year].push(r.code); }
+  }
+  const ys = new Set(Object.keys(OECD_AVG).map(Number));
+  for(const c in DATA) for(const y in DATA[c]) ys.add(+y);
+  YEARS = [...ys].sort((a,b)=>a-b);
+  // OECD average missing for an imported year → estimate from OECD members in the file
+  for(const y of YEARS){
+    if(OECD_AVG[y]) continue;
+    OECD_AVG[y] = [0,1,2].map(i=>{ const v=OECD_MEMBERS.map(c=>DATA[c]?.[y]?.[i]).filter(x=>x!=null); return v.length? Math.round(v.reduce((a,b)=>a+b,0)/v.length) : null; });
+    OECD_AVG[y].estimated = true;
+  }
+  const withScores = YEARS.filter(y=>Object.keys(DATA).some(c=>DATA[c][y]));
+  LATEST = withScores[withScores.length-1];
+  PREV = withScores.length>1 ? withScores[withScores.length-2] : null;
+  for(const k in _rankCache) delete _rankCache[k];
+}
+function loadImports(){ try{ IMPORTED = JSON.parse(localStorage.getItem(STORE_KEY)||'[]')||[]; }catch(e){ IMPORTED=[]; } }
+function saveImports(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(IMPORTED)); return true; }catch(e){ return false; } }
+const OECD_MEMBERS = 'AU AT BE CA CL CO CR CZ DK EE FI FR DE GR HU IS IE IL IT JP KR LV LT LU MX NL NZ NO PL PT SK SI ES SE CH TR GB US'.split(' ');
+
+/* All countries/territories (ISO 3166-1 + Kosovo) — ~250 entries */
+const COUNTRY_LIST = `AF|Afghanistan;AX|Åland Islands;AL|Albania;DZ|Algeria;AS|American Samoa;AD|Andorra;AO|Angola;AI|Anguilla;AQ|Antarctica;AG|Antigua and Barbuda;AR|Argentina;AM|Armenia;AW|Aruba;AU|Australia;AT|Austria;AZ|Azerbaijan;BS|Bahamas;BH|Bahrain;BD|Bangladesh;BB|Barbados;BY|Belarus;BE|Belgium;BZ|Belize;BJ|Benin;BM|Bermuda;BT|Bhutan;BO|Bolivia;BQ|Caribbean Netherlands;BA|Bosnia and Herzegovina;BW|Botswana;BV|Bouvet Island;BR|Brazil;IO|British Indian Ocean Territory;BN|Brunei Darussalam;BG|Bulgaria;BF|Burkina Faso;BI|Burundi;CV|Cabo Verde;KH|Cambodia;CM|Cameroon;CA|Canada;KY|Cayman Islands;CF|Central African Republic;TD|Chad;CL|Chile;CN|China;CX|Christmas Island;CC|Cocos (Keeling) Islands;CO|Colombia;KM|Comoros;CG|Congo;CD|Congo (Democratic Republic);CK|Cook Islands;CR|Costa Rica;CI|Côte d'Ivoire;HR|Croatia;CU|Cuba;CW|Curaçao;CY|Cyprus;CZ|Czechia;DK|Denmark;DJ|Djibouti;DM|Dominica;DO|Dominican Republic;EC|Ecuador;EG|Egypt;SV|El Salvador;GQ|Equatorial Guinea;ER|Eritrea;EE|Estonia;SZ|Eswatini;ET|Ethiopia;FK|Falkland Islands;FO|Faroe Islands;FJ|Fiji;FI|Finland;FR|France;GF|French Guiana;PF|French Polynesia;TF|French Southern Territories;GA|Gabon;GM|Gambia;GE|Georgia;DE|Germany;GH|Ghana;GI|Gibraltar;GR|Greece;GL|Greenland;GD|Grenada;GP|Guadeloupe;GU|Guam;GT|Guatemala;GG|Guernsey;GN|Guinea;GW|Guinea-Bissau;GY|Guyana;HT|Haiti;HM|Heard Island and McDonald Islands;VA|Holy See (Vatican);HN|Honduras;HK|Hong Kong;HU|Hungary;IS|Iceland;IN|India;ID|Indonesia;IR|Iran;IQ|Iraq;IE|Ireland;IM|Isle of Man;IL|Israel;IT|Italy;JM|Jamaica;JP|Japan;JE|Jersey;JO|Jordan;KZ|Kazakhstan;KE|Kenya;KI|Kiribati;KP|Korea (North);KR|Korea (South);XK|Kosovo;KW|Kuwait;KG|Kyrgyzstan;LA|Laos;LV|Latvia;LB|Lebanon;LS|Lesotho;LR|Liberia;LY|Libya;LI|Liechtenstein;LT|Lithuania;LU|Luxembourg;MO|Macao;MG|Madagascar;MW|Malawi;MY|Malaysia;MV|Maldives;ML|Mali;MT|Malta;MH|Marshall Islands;MQ|Martinique;MR|Mauritania;MU|Mauritius;YT|Mayotte;MX|Mexico;FM|Micronesia;MD|Moldova;MC|Monaco;MN|Mongolia;ME|Montenegro;MS|Montserrat;MA|Morocco;MZ|Mozambique;MM|Myanmar;NA|Namibia;NR|Nauru;NP|Nepal;NL|Netherlands;NC|New Caledonia;NZ|New Zealand;NI|Nicaragua;NE|Niger;NG|Nigeria;NU|Niue;NF|Norfolk Island;MK|North Macedonia;MP|Northern Mariana Islands;NO|Norway;OM|Oman;PK|Pakistan;PW|Palau;PS|Palestine;PA|Panama;PG|Papua New Guinea;PY|Paraguay;PE|Peru;PH|Philippines;PN|Pitcairn Islands;PL|Poland;PT|Portugal;PR|Puerto Rico;QA|Qatar;RE|Réunion;RO|Romania;RU|Russia;RW|Rwanda;BL|Saint Barthélemy;SH|Saint Helena;KN|Saint Kitts and Nevis;LC|Saint Lucia;MF|Saint Martin;PM|Saint Pierre and Miquelon;VC|Saint Vincent and the Grenadines;WS|Samoa;SM|San Marino;ST|São Tomé and Príncipe;SA|Saudi Arabia;SN|Senegal;RS|Serbia;SC|Seychelles;SL|Sierra Leone;SG|Singapore;SX|Sint Maarten;SK|Slovakia;SI|Slovenia;SB|Solomon Islands;SO|Somalia;ZA|South Africa;GS|South Georgia and the South Sandwich Islands;SS|South Sudan;ES|Spain;LK|Sri Lanka;SD|Sudan;SR|Suriname;SJ|Svalbard and Jan Mayen;SE|Sweden;CH|Switzerland;SY|Syria;TW|Taiwan;TJ|Tajikistan;TZ|Tanzania;TH|Thailand;TL|Timor-Leste;TG|Togo;TK|Tokelau;TO|Tonga;TT|Trinidad and Tobago;TN|Tunisia;TR|Türkiye;TM|Turkmenistan;TC|Turks and Caicos Islands;TV|Tuvalu;UG|Uganda;UA|Ukraine;AE|United Arab Emirates;GB|United Kingdom;US|United States;UM|U.S. Minor Outlying Islands;UY|Uruguay;UZ|Uzbekistan;VU|Vanuatu;VE|Venezuela;VN|Viet Nam;VG|British Virgin Islands;VI|U.S. Virgin Islands;WF|Wallis and Futuna;EH|Western Sahara;YE|Yemen;ZM|Zambia;ZW|Zimbabwe`
+  .split(';').map(s=>{const [c,n]=s.split('|');return {code:c,en:n};});
+
+/* Official PISA reporting names (countries/economies that participate as sub-national units) */
+const PISA_LABEL = {
+  CN:{en:'B-S-J-Z (China)', th:'ปักกิ่ง-เซี่ยงไฮ้-เจียงซู-เจ้อเจียง (จีน)'},
+  HK:{en:'Hong Kong (China)', th:'ฮ่องกง (จีน)'},
+  MO:{en:'Macao (China)', th:'มาเก๊า (จีน)'},
+  TW:{en:'Chinese Taipei', th:'จีนไทเป'},
+  UA:{en:'Ukrainian regions (17 of 27)', th:'ยูเครน (17 จาก 27 ภูมิภาค)'},
+  IQ:{en:'Kurdistan Region (Iraq)', th:'เขตเคิร์ดิสถาน (อิรัก)'},
+  TJ:{en:'Dushanbe (Tajikistan)', th:'ดูชานเบ (ทาจิกิสถาน)'},
+  PS:{en:'Palestinian Authority', th:'องค์การบริหารปาเลสไตน์'},
+  KR:{en:'Korea', th:'เกาหลีใต้'}
+};
+const TH_FALLBACK = {XK:'โคโซโว'};
+
+/* =====================================================================
+   2) I18N
+   ===================================================================== */
+const SUBJ_KEYS = ['math','read','sci','avg'];
+const T = {
+ th:{
+  title:'PISA Explorer — สำรวจคะแนน PISA ทั่วโลก',
+  sub:'ข้อมูลผลการประเมิน PISA ของ OECD รอบล่าสุด (PISA {Y}) พร้อมเปรียบเทียบย้อนหลัง · ปีที่มีข้อมูล: {YL}',
+  reset:'รีเซ็ตหน้า',
+  rankH:'อันดับคะแนน PISA {Y} (ปีล่าสุด)',
+  rankSub:'เรียงจากอันดับ 1 ถึงอันดับสุดท้าย · {N} ประเทศ/เขตเศรษฐกิจ',
+  sortBy:'เรียงอันดับตาม: ', rankHint:'คลิกแถวเพื่อเพิ่ม/ลบประเทศในการเปรียบเทียบ',
+  rankNote:'* OECD ขอให้ตีความด้วยความระมัดระวัง เนื่องจากไม่ผ่านมาตรฐานการสุ่มตัวอย่างบางข้อ · Uzbekistan มีเฉพาะคะแนนวิทยาศาสตร์ (OECD ไม่รายงานคะแนนคณิตศาสตร์และการอ่าน) · ค่าเฉลี่ย 3 ด้านเป็นค่าที่คำนวณเพิ่ม ไม่ใช่ตัวชี้วัดทางการของ OECD · อันดับคำนวณจากคะแนนเฉลี่ยจำนวนเต็ม คะแนนเท่ากันได้อันดับเท่ากัน',
+  stParticipants:'ประเทศ/เขตเศรษฐกิจ', stOecd:'ค่าเฉลี่ย OECD (คณิต/อ่าน/วิทย์)', stTopSci:'สูงสุดด้านวิทยาศาสตร์', stTopMath:'สูงสุดด้านคณิตศาสตร์', stTopRead:'สูงสุดด้านการอ่าน',
+  math:'คณิตศาสตร์', read:'การอ่าน', sci:'วิทยาศาสตร์', avg:'เฉลี่ย 3 ด้าน',
+  rank:'อันดับ', country:'ประเทศ/เขตเศรษฐกิจ', chg:'เปลี่ยนแปลงจาก {P}',
+  oecdAvg:'ค่าเฉลี่ย OECD',
+  pickH:'เลือกประเทศเพื่อดูข้อมูลและเปรียบเทียบ',
+  pickSub:'พิมพ์ตัวอักษรภาษาอังกฤษเพียง 1 ตัว (เช่น T) ระบบจะแสดงรายชื่อประเทศทั้งหมดในโลก (~250 ประเทศ) ที่ขึ้นต้นด้วยตัวอักษรนั้น เลือกได้ทั้งประเทศเดียวและหลายประเทศ',
+  ph:'พิมพ์ชื่อประเทศ เช่น T, Th, Japan ...', clear:'ล้างประเทศที่เลือก',
+  bOk:'มีข้อมูล PISA {Y}', bOld:'มีเฉพาะปีก่อน', bNo:'ไม่ได้เข้าร่วม PISA', noMatch:'ไม่พบประเทศที่ตรงกับคำค้น',
+  tblH:'ตารางข้อมูลมิติและดัชนีการวัด PISA', tblSub1:'ข้อมูลของ', tblSubN:'เปรียบเทียบ {n} ประเทศในตารางเดียว (คอลัมน์สุดท้ายคือค่าเฉลี่ย OECD)',
+  xlsx:'บันทึกเป็น Excel', charts:'แสดงกราฟข้อมูล', hideCharts:'ซ่อนกราฟ',
+  dimension:'มิติการวัด', indicator:'ดัชนีชี้วัด', profile:'สรุปภาพรวม',
+  iMean:'คะแนนเฉลี่ย {y}', iRank:'อันดับ {y} (จากทั้งหมด)', iDiff:'ต่างจากค่าเฉลี่ย OECD {y}', iPct:'ตำแหน่งเปอร์เซ็นไทล์ {y}',
+  iChg:'การเปลี่ยนแปลง {a}→{b}',
+  iStrong:'ด้านที่แข็งที่สุด', iWeak:'ด้านที่อ่อนที่สุด', iGap:'ช่องว่างระหว่างด้านสูงสุด-ต่ำสุด', iOecd:'สมาชิก OECD', iCaution:'ข้อควรระวัง (มาตรฐานการสุ่ม)', iLabel:'ชื่อที่ใช้รายงานใน PISA',
+  yes:'ใช่', no:'ไม่ใช่', cautionYes:'ตีความด้วยความระมัดระวัง', na:'–', of:'จาก',
+  descH:'คำอธิบายตาราง',
+  descDims:'<b>มิติการวัด</b> ของ PISA มี 3 ด้านหลัก คือ <b>คณิตศาสตร์</b> (ความสามารถในการใช้คณิตศาสตร์แก้ปัญหาในชีวิตจริง) <b>การอ่าน</b> (ความเข้าใจ ใช้ ประเมิน และสะท้อนจากข้อความ) และ <b>วิทยาศาสตร์</b> (การอธิบายปรากฏการณ์ ออกแบบ/ประเมินการสืบเสาะ และตีความข้อมูลอย่างเป็นวิทยาศาสตร์ — เป็นด้านหลักของรอบ 2025) ส่วน <b>เฉลี่ย 3 ด้าน</b> เป็นค่าเฉลี่ยที่คำนวณเพิ่มเพื่อดูภาพรวม',
+  descIdx:'<b>ดัชนีชี้วัดในแต่ละมิติ</b>',
+  descList:['<b>คะแนนเฉลี่ย</b> — คะแนนเฉลี่ยของนักเรียนอายุ 15 ปีในสเกล PISA (ค่าเฉลี่ย OECD ดั้งเดิมราว 500, SD ≈ 100)','<b>อันดับ</b> — ลำดับเมื่อเรียงคะแนนเฉลี่ยจากมากไปน้อยในปีนั้น (คะแนนเท่ากันได้อันดับร่วม)','<b>ต่างจากค่าเฉลี่ย OECD</b> — ค่าบวกหมายถึงสูงกว่าค่าเฉลี่ยประเทศ OECD','<b>ตำแหน่งเปอร์เซ็นไทล์</b> — ร้อยละของประเทศ/เขตเศรษฐกิจที่ได้คะแนนต่ำกว่า (ยิ่งสูงยิ่งดี)','<b>การเปลี่ยนแปลง</b> — ผลต่างคะแนนเทียบรอบก่อน (ค่าบวก = พัฒนาขึ้น) ความต่างราว 20 คะแนนใกล้เคียงการเรียนรู้ประมาณ 1 ปีการศึกษา'],
+  descHL:'ช่องสีเขียว = ค่าที่ดีที่สุดในแถวนั้นเมื่อเปรียบเทียบหลายประเทศ',
+  descSum:'<b>สรุปรายประเทศ</b>',
+  sumLine:'<b>{c}</b>: คะแนนเฉลี่ย 3 ด้าน {avg} (อันดับ {r}) — คณิตศาสตร์ {m}, การอ่าน {rd}, วิทยาศาสตร์ {s}; ด้านที่แข็งที่สุดคือ{st} ด้านที่อ่อนที่สุดคือ{wk}; เทียบกับ OECD {cmp}; เทียบกับปี {P} {trend}',
+  above:'สูงกว่าค่าเฉลี่ยทั้ง {n} ด้าน', below:'ต่ำกว่าค่าเฉลี่ยทั้ง {n} ด้าน', mixed:'สูงกว่าค่าเฉลี่ย {a} ด้าน และต่ำกว่า {b} ด้าน',
+  trUp:'ดีขึ้น', trDown:'ลดลง', trNo:'ไม่มีข้อมูลปี {P} สำหรับเปรียบเทียบ',
+  noData:'<b>{c}</b>: ไม่ได้เข้าร่วมการประเมิน PISA ในรอบ {YL} จึงไม่มีข้อมูลคะแนน',
+  oldOnly:'<b>{c}</b>: ไม่ได้เข้าร่วม PISA {Y} — มีข้อมูลเฉพาะปี {ys} (ดูในตาราง)',
+  chH:'กราฟข้อมูลดัชนีชี้วัด', chSub:'แต่ละกราฟเลือกรูปแบบการแสดงตัวเลขได้ และดาวน์โหลดเป็นไฟล์ PNG ได้',
+  lbl:'ตัวเลขในกราฟ:', lNone:'ไม่แสดง', lAll:'แสดงทุกค่า', lEvery:'แสดงทุก ๆ N ค่า', lLatest:'เฉพาะค่าล่าสุด/สุดท้าย', nLbl:'N =', png:'ดาวน์โหลด PNG',
+  subj:'ด้าน:', period:'ช่วงเวลา:',
+  c1:'คะแนนเฉลี่ย 3 ด้าน (PISA {Y})', c1d:'กราฟแท่งกลุ่ม เปรียบเทียบคะแนนแต่ละด้านของประเทศที่เลือกกับค่าเฉลี่ย OECD',
+  c2:'โปรไฟล์ความสามารถ (เรดาร์)', c2d:'เห็นจุดแข็ง-จุดอ่อนของแต่ละประเทศในทุกมิติพร้อมกัน',
+  c3:'แนวโน้มคะแนน {YS}', c3d:'กราฟเส้นแสดงพัฒนาการตามรอบการประเมิน (เลือกด้านได้)',
+  c4:'ส่วนต่างจากค่าเฉลี่ย OECD ({Y})', c4d:'ค่าบวก = สูงกว่าค่าเฉลี่ย OECD, ค่าลบ = ต่ำกว่า',
+  c5:'การเปลี่ยนแปลงของคะแนน', c5d:'ผลต่างคะแนนระหว่างรอบการประเมิน (เลือกช่วงเวลาได้)',
+  c6:'ตำแหน่งในอันดับโลก (PISA {Y})', c6d:'ทุกประเทศ/เขตเศรษฐกิจเรียงตามคะแนน แถบสีส้มคือประเทศที่เลือก',
+  c7:'ความสัมพันธ์คณิตศาสตร์ × การอ่าน ({Y})', c7d:'กราฟกระจาย จุดสีเทาคือทุกประเทศ จุดสีคือประเทศที่เลือก',
+  c8:'คะแนนรวม 3 ด้าน (กราฟแท่งซ้อน)', c8d:'ผลรวมคะแนนคณิตศาสตร์ + การอ่าน + วิทยาศาสตร์ ปี {Y}',
+  c9:'คะแนนเฉลี่ย 3 ด้าน (Polar Area)', c9d:'เปรียบเทียบค่าเฉลี่ยภาพรวมของแต่ละประเทศกับ OECD',
+  others:'ประเทศอื่น ๆ', score:'คะแนน', diffAx:'ส่วนต่าง (คะแนน)', chgAx:'เปลี่ยนแปลง (คะแนน)',
+  needData:'ประเทศที่เลือกไม่มีข้อมูลสำหรับกราฟนี้',
+  foot:'แหล่งข้อมูล: OECD PISA 2025 Results (Volume I) เผยแพร่ 8 ก.ย. 2569; PISA 2022 และ PISA 2018 Results (Volume I) · ข้อมูลฝังอยู่ในไฟล์ (ทำงานแบบออฟไลน์ได้ ยกเว้นไลบรารีกราฟ/Excel ที่โหลดจาก CDN)',
+  impH:'อัปเดตข้อมูลปีใหม่ (นำเข้าไฟล์ Excel/CSV)',
+  impSub:'เมื่อ OECD ประกาศผล PISA รอบใหม่ (เช่น PISA 2029) ให้ดาวน์โหลดไฟล์ตัวอย่าง กรอกคะแนน แล้วกด "นำเข้าข้อมูล" ปีใหม่จะกลายเป็นปีล่าสุดของทั้งหน้าโดยอัตโนมัติ ข้อมูลที่นำเข้าจะถูกจำไว้ในเบราว์เซอร์นี้ (เปิดไฟล์ครั้งหน้ายังอยู่)',
+  impBtn:'นำเข้าข้อมูล (Excel/CSV)', tplBtn:'ดาวน์โหลดไฟล์ตัวอย่าง', clearImp:'ลบข้อมูลที่นำเข้าทั้งหมด',
+  impNone:'ยังไม่มีข้อมูลที่นำเข้า — ใช้ข้อมูลที่ฝังในไฟล์ (ปี 2018, 2022, 2025)',
+  impHave:'ข้อมูลที่นำเข้าแล้ว: {n} แถว · ปี {ys}',
+  impOk:'นำเข้าสำเร็จ {n} แถว (ปี {ys})', impSkip:'ข้ามแถวที่ไม่รู้จักชื่อประเทศ {n} แถว: {list}',
+  impNoRows:'ไม่พบแถวข้อมูลที่ใช้ได้ — ตรวจสอบหัวคอลัมน์ (Year, Code หรือ Country, Mathematics, Reading, Science)',
+  impAskYear:'ไฟล์นี้ไม่มีคอลัมน์ปี (Year) — กรุณาระบุปีของข้อมูล เช่น 2029',
+  impEst:'ไม่มีแถวค่าเฉลี่ย OECD สำหรับปี {y} จึงประมาณจากประเทศสมาชิก OECD ในไฟล์',
+  impConfirmClear:'ลบข้อมูลที่นำเข้าทั้งหมดและกลับไปใช้ข้อมูลเดิมในไฟล์?',
+  impNoStore:'หมายเหตุ: เบราว์เซอร์นี้ไม่อนุญาตให้บันทึกข้อมูล ข้อมูลที่นำเข้าจะหายเมื่อปิดหน้า',
+  impHow:'<b>รูปแบบไฟล์:</b> 1 แถวต่อ 1 ประเทศ คอลัมน์ <b>Year</b> (ปี), <b>Code</b> (รหัสประเทศ 2 ตัวอักษร เช่น TH) หรือ <b>Country</b> (ชื่อภาษาอังกฤษ/ไทย เช่น Thailand), <b>Mathematics</b>, <b>Reading</b>, <b>Science</b> และ <b>Caution</b> (ใส่ Y ถ้า OECD ให้ระวังการตีความ — ไม่บังคับ) · ใส่แถว <b>OECD average</b> (Code = OECD) เพื่อกำหนดค่าเฉลี่ย OECD · นำเข้าปีที่มีอยู่แล้วซ้ำได้ ค่าใหม่จะแทนค่าเดิม',
+  tplSheet:'กรอกข้อมูล', tplHelp:'วิธีใช้', tplAll:'ข้อมูลทั้งหมดปัจจุบัน',
+  xlsxSheet1:'เปรียบเทียบ', xlsxSheet2:'อันดับ PISA {Y}'
+ },
+ en:{
+  title:'PISA Explorer — Global PISA Scores',
+  sub:'OECD PISA results for the latest cycle (PISA {Y}) with trend comparison · years with data: {YL}',
+  reset:'Reset page',
+  rankH:'PISA {Y} Ranking (latest cycle)',
+  rankSub:'Ordered from 1st to last · {N} countries/economies',
+  sortBy:'Rank by: ', rankHint:'Click a row to add/remove a country from the comparison',
+  rankNote:'* OECD advises caution: one or more sampling standards were not met · Uzbekistan has a science score only (the OECD does not report its reading and mathematics) · The 3-subject average is a derived figure, not an official OECD indicator · Ranks are based on whole-number means; ties share a rank',
+  stParticipants:'Countries/economies', stOecd:'OECD average (Math/Read/Sci)', stTopSci:'Top in science', stTopMath:'Top in mathematics', stTopRead:'Top in reading',
+  math:'Mathematics', read:'Reading', sci:'Science', avg:'3-subject average',
+  rank:'Rank', country:'Country/economy', chg:'Change vs {P}',
+  oecdAvg:'OECD average',
+  pickH:'Select countries to view and compare',
+  pickSub:'Type just one English letter (e.g. T) to list every country in the world (~250) starting with it. Pick one or several countries.',
+  ph:'Type a country, e.g. T, Th, Japan ...', clear:'Clear selection',
+  bOk:'PISA {Y} data', bOld:'Earlier cycles only', bNo:'Not in PISA', noMatch:'No matching country',
+  tblH:'PISA measurement dimensions & indicators', tblSub1:'Data for', tblSubN:'Comparing {n} countries in one table (last column = OECD average)',
+  xlsx:'Save as Excel', charts:'Show charts', hideCharts:'Hide charts',
+  dimension:'Dimension', indicator:'Indicator', profile:'Overall profile',
+  iMean:'Mean score {y}', iRank:'Rank {y} (out of)', iDiff:'Difference from OECD average {y}', iPct:'Percentile position {y}',
+  iChg:'Change {a}→{b}',
+  iStrong:'Strongest subject', iWeak:'Weakest subject', iGap:'Gap between best and weakest subject', iOecd:'OECD member', iCaution:'Caution (sampling standards)', iLabel:'PISA reporting name',
+  yes:'Yes', no:'No', cautionYes:'Interpret with caution', na:'–', of:'of',
+  descH:'About this table',
+  descDims:'PISA measures three core <b>dimensions</b>: <b>Mathematics</b> (using maths to solve real-world problems), <b>Reading</b> (understanding, using, evaluating and reflecting on texts) and <b>Science</b> (explaining phenomena, designing/evaluating enquiry and interpreting data scientifically — the major domain in 2025). The <b>3-subject average</b> is a derived overall figure.',
+  descIdx:'<b>Indicators in every dimension</b>',
+  descList:['<b>Mean score</b> — average performance of 15-year-olds on the PISA scale (original OECD mean ≈ 500, SD ≈ 100)','<b>Rank</b> — position when mean scores are sorted from highest to lowest that year (ties share a rank)','<b>Difference from OECD average</b> — positive means above the OECD average','<b>Percentile position</b> — share of participating systems scoring lower (higher is better)','<b>Change</b> — score difference versus an earlier cycle (positive = improvement); ~20 points is roughly one year of schooling'],
+  descHL:'Green cells = best value in that row when several countries are compared',
+  descSum:'<b>Country summaries</b>',
+  sumLine:'<b>{c}</b>: 3-subject average {avg} (rank {r}) — Mathematics {m}, Reading {rd}, Science {s}; strongest in {st}, weakest in {wk}; versus the OECD it is {cmp}; versus {P} {trend}',
+  above:'above average in all {n} subjects', below:'below average in all {n} subjects', mixed:'above average in {a} and below in {b} subjects',
+  trUp:'up', trDown:'down', trNo:'no {P} data available for comparison',
+  noData:'<b>{c}</b>: did not take part in PISA {YL}, so no scores are available',
+  oldOnly:'<b>{c}</b>: did not take part in PISA {Y} — data only for {ys} (see table)',
+  chH:'Indicator charts', chSub:'Each chart lets you choose how values are labelled and can be downloaded as PNG',
+  lbl:'Data labels:', lNone:'Hide', lAll:'Show all', lEvery:'Every N-th value', lLatest:'Latest / last value only', nLbl:'N =', png:'Download PNG',
+  subj:'Subject:', period:'Period:',
+  c1:'Mean scores by subject (PISA {Y})', c1d:'Grouped bars comparing each subject for the selected countries and the OECD average',
+  c2:'Performance profile (radar)', c2d:'Strengths and weaknesses across all dimensions at once',
+  c3:'Trend {YS}', c3d:'Line chart of performance across cycles (choose a subject)',
+  c4:'Difference from OECD average ({Y})', c4d:'Positive = above the OECD average, negative = below',
+  c5:'Score change', c5d:'Difference between cycles (choose a period)',
+  c6:'Position in the world ranking (PISA {Y})', c6d:'All systems sorted by score; orange bars are the selected countries',
+  c7:'Mathematics × Reading ({Y})', c7d:'Scatter plot — grey points are all systems, coloured points are selected countries',
+  c8:'Combined score of 3 subjects (stacked)', c8d:'Mathematics + Reading + Science, {Y}',
+  c9:'3-subject average (polar area)', c9d:'Overall average of each country compared with the OECD',
+  others:'Other systems', score:'Score', diffAx:'Difference (points)', chgAx:'Change (points)',
+  needData:'The selected countries have no data for this chart',
+  foot:'Sources: OECD PISA 2025 Results (Volume I), released 8 Sep 2026; PISA 2022 and PISA 2018 Results (Volume I) · Data are embedded in this file (works offline except the chart/Excel libraries loaded from a CDN)',
+  impH:'Add a new cycle (import Excel/CSV)',
+  impSub:'When the OECD releases a new PISA cycle (e.g. PISA 2029), download the template, fill in the scores and click "Import data". The new year automatically becomes the latest year across the whole page. Imported data are remembered in this browser.',
+  impBtn:'Import data (Excel/CSV)', tplBtn:'Download template', clearImp:'Remove all imported data',
+  impNone:'No imported data yet — using the data embedded in the file (2018, 2022, 2025)',
+  impHave:'Imported data: {n} rows · years {ys}',
+  impOk:'Imported {n} rows (years {ys})', impSkip:'Skipped {n} rows with unrecognised country names: {list}',
+  impNoRows:'No usable rows found — check the column headers (Year, Code or Country, Mathematics, Reading, Science)',
+  impAskYear:'This file has no Year column — please enter the year of the data, e.g. 2029',
+  impEst:'No OECD-average row for {y}, so it was estimated from the OECD members in the file',
+  impConfirmClear:'Remove all imported data and go back to the data embedded in the file?',
+  impNoStore:'Note: this browser does not allow saving data; imported data will be lost when the page is closed',
+  impHow:'<b>File format:</b> one row per country with columns <b>Year</b>, <b>Code</b> (2-letter country code, e.g. TH) or <b>Country</b> (English/Thai name, e.g. Thailand), <b>Mathematics</b>, <b>Reading</b>, <b>Science</b> and optional <b>Caution</b> (Y if the OECD advises caution) · Add an <b>OECD average</b> row (Code = OECD) to set the OECD average · Re-importing a year replaces its earlier values',
+  tplSheet:'Fill in', tplHelp:'How to use', tplAll:'All current data',
+  xlsxSheet1:'Comparison', xlsxSheet2:'PISA {Y} ranking'
+ }
+};
+let LANG = 'th';
+const t = (k,vars)=>{
+  let s=(T[LANG][k]??k);
+  if(vars) for(const v in vars) s=s.split('{'+v+'}').join(vars[v]);
+  if(typeof s==='string'){
+    s=s.split('{Y}').join(LATEST).split('{P}').join(PREV??'–').split('{YS}').join(YEARS.join(' → '))
+       .split('{YL}').join(YEARS.join(', ')).split('{N}').join(Object.keys(DATA).filter(hasLatest).length);
+  }
+  return s;
+};
+
+/* =====================================================================
+   3) HELPERS
+   ===================================================================== */
+let dnTh=null, dnEn=null;
+try{dnTh=new Intl.DisplayNames(['th'],{type:'region'});}catch(e){}
+try{dnEn=new Intl.DisplayNames(['en'],{type:'region'});}catch(e){}
+const EN_MAP = Object.fromEntries(COUNTRY_LIST.map(c=>[c.code,c.en]));
+function thName(code){
+  let n=null; try{ if(dnTh) n=dnTh.of(code);}catch(e){}
+  if(!n||n===code) n=TH_FALLBACK[code]||EN_MAP[code]||code;
+  return n;
+}
+function countryName(code){ return LANG==='th'?thName(code):(EN_MAP[code]||code); }
+function pisaName(code){ const p=PISA_LABEL[code]; return p?p[LANG]:countryName(code); }
+
+function score(code,year,i){
+  if(year==null) return null;
+  const y = code==='OECD' ? OECD_AVG[year] : DATA[code]?.[year];
+  if(!y) return null;
+  if(i===3){ if(y.slice(0,3).some(v=>v==null)) return null; return +((y[0]+y[1]+y[2])/3).toFixed(1); }
+  return y[i] ?? null;
+}
+function participants(year,i){ return Object.keys(DATA).filter(c=>score(c,year,i)!=null); }
+const _rankCache={};
+function rankOf(code,year,i){
+  const k=year+'_'+i; if(!_rankCache[k]){ const list=participants(year,i).map(c=>score(c,year,i)); _rankCache[k]=list; }
+  const v=score(code,year,i); if(v==null) return null;
+  return 1+_rankCache[k].filter(x=>x>v).length;
+}
+function nOf(year,i){ return participants(year,i).length; }
+function pctOf(code,year,i){ const v=score(code,year,i); if(v==null) return null; const all=participants(year,i).map(c=>score(c,year,i)); return Math.round(100*all.filter(x=>x<v).length/all.length); }
+function hasLatest(code){ return !!DATA[code]?.[LATEST]; }
+function hasAny(code){ return !!DATA[code] && Object.keys(DATA[code]).length>0; }
+function yearsOf(code){ return YEARS.filter(y=>DATA[code]?.[y]); }
+const fmt = v => v==null? t('na') : (Number.isInteger(v)? String(v) : v.toFixed(1));
+const fmtS = v => v==null? t('na') : (v>0?'+':v<0?'−':'±')+fmt(Math.abs(v));
+const signCls = v => v==null? '' : v>0?'pos':v<0?'neg':'';
+const diff=(a,b)=> (a==null||b==null)?null: +(a-b).toFixed(1);
+const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* =====================================================================
+   4) STATE
+   ===================================================================== */
+let SELECTED = [];
+let SORT = 2; // default science (major domain 2025)
+let chartsVisible = false;
+const CHARTS = {};
+const LBL = {};    // per chart label settings
+const EXTRA = {};  // per chart extra selector
+
+/* =====================================================================
+   5) RANKING (home)
+   ===================================================================== */
+function renderStats(){
+  const top=i=>{const c=participants(LATEST,i).sort((a,b)=>score(b,LATEST,i)-score(a,LATEST,i))[0];return c?`${esc(pisaName(c))} (${score(c,LATEST,i)})`:t('na');};
+  const o=OECD_AVG[LATEST]||[];
+  document.getElementById('stats').innerHTML=`
+   <div class="stat"><b>${Object.keys(DATA).filter(hasLatest).length}</b>${t('stParticipants')}</div>
+   <div class="stat"><b>${[0,1,2].map(i=>fmt(o[i]??null)).join(' / ')}</b>${t('stOecd')}${o.estimated?' *':''}</div>
+   <div class="stat"><b style="font-size:1rem">${top(2)}</b>${t('stTopSci')}</div>
+   <div class="stat"><b style="font-size:1rem">${top(0)}</b>${t('stTopMath')}</div>
+   <div class="stat"><b style="font-size:1rem">${top(1)}</b>${t('stTopRead')}</div>`;
+}
+function renderSortSel(){
+  const s=document.getElementById('sortSel');
+  s.innerHTML=[2,0,1,3].map(i=>`<option value="${i}" ${i===SORT?'selected':''}>${t(SUBJ_KEYS[i])}</option>`).join('');
+}
+function rankingRows(){
+  const codes=Object.keys(DATA).filter(hasLatest);
+  return codes.sort((a,b)=>{
+    const va=score(a,LATEST,SORT), vb=score(b,LATEST,SORT);
+    if(va==null&&vb==null) return 0; if(va==null) return 1; if(vb==null) return -1; return vb-va;
+  });
+}
+function renderRanking(){
+  const tb=document.getElementById('rankTbl');
+  const cols=[2,1,0,3];
+  let h=`<thead><tr><th>${t('rank')}</th><th class="l">${t('country')}</th>`+
+    cols.map(i=>`<th class="sortable ${i===SORT?'sorted':''}" data-s="${i}">${t(SUBJ_KEYS[i])}${i===SORT?' ▼':''}</th>`).join('')+
+    `<th>${t('chg')} (${t(SUBJ_KEYS[SORT])})</th></tr></thead><tbody>`;
+  for(const c of rankingRows()){
+    const r=rankOf(c,LATEST,SORT);
+    const medal=r&&r<=3?`<span class="medal m${r}">${r}</span>`:(r??'–');
+    const cau=(CAUTION[LATEST]||[]).includes(c)?'*':'';
+    const ch=diff(score(c,LATEST,SORT),score(c,PREV,SORT));
+    h+=`<tr data-c="${c}" class="${SELECTED.includes(c)?'is-sel':''}"><td>${medal}</td><td class="l">${esc(pisaName(c))}${cau}</td>`+
+      cols.map(i=>`<td>${fmt(score(c,LATEST,i))}</td>`).join('')+
+      `<td class="${signCls(ch)}">${fmtS(ch)}</td></tr>`;
+  }
+  h+=`<tr class="oecd"><td></td><td class="l">${t('oecdAvg')}</td>`+cols.map(i=>`<td>${fmt(score('OECD',LATEST,i))}</td>`).join('')+
+     `<td class="${signCls(diff(score('OECD',LATEST,SORT),score('OECD',PREV,SORT)))}">${fmtS(diff(score('OECD',LATEST,SORT),score('OECD',PREV,SORT)))}</td></tr></tbody>`;
+  tb.innerHTML=h;
+  tb.querySelectorAll('th.sortable').forEach(th=>th.onclick=()=>{SORT=+th.dataset.s;renderSortSel();renderRanking();});
+  tb.querySelectorAll('tbody tr[data-c]').forEach(tr=>tr.onclick=()=>toggle(tr.dataset.c));
+}
+
+/* =====================================================================
+   6) COUNTRY PICKER (autocomplete)
+   ===================================================================== */
+const qEl=document.getElementById('q'), ddEl=document.getElementById('dd');
+let ddItems=[], ddAct=-1;
+function searchCountries(q){
+  q=q.trim().toLowerCase(); if(!q) return [];
+  const res=[];
+  for(const c of COUNTRY_LIST){
+    const names=[c.en, thName(c.code), PISA_LABEL[c.code]?.en||'', PISA_LABEL[c.code]?.th||''].map(s=>s.toLowerCase());
+    const starts=names.some(n=>n.startsWith(q)||n.split(/[\s(\-]+/).some(w=>w&&w.startsWith(q)&&q.length>1));
+    const incl=q.length>=2&&names.some(n=>n.includes(q));
+    if(starts||incl) res.push({c, score: names.some(n=>n.startsWith(q))?0:1});
+  }
+  return res.sort((a,b)=>a.score-b.score||countryName(a.c.code).localeCompare(countryName(b.c.code),LANG)).map(r=>r.c);
+}
+function badge(code){
+  if(hasLatest(code)) return `<span class="badge b-ok">${t('bOk')}</span>`;
+  if(hasAny(code)) return `<span class="badge b-old">${t('bOld')}</span>`;
+  return `<span class="badge b-no">${t('bNo')}</span>`;
+}
+function renderDD(){
+  const list=searchCountries(qEl.value);
+  ddItems=list; ddAct=list.length?0:-1;
+  if(!qEl.value.trim()){ddEl.classList.remove('show');return;}
+  if(!list.length){ddEl.innerHTML=`<div class="empty">${t('noMatch')}</div>`;ddEl.classList.add('show');return;}
+  ddEl.innerHTML=list.map((c,i)=>{
+    const sub=[]; if(LANG==='th') sub.push(c.en); else sub.push(thName(c.code));
+    if(PISA_LABEL[c.code]&&PISA_LABEL[c.code][LANG]!==countryName(c.code)) sub.push('PISA: '+PISA_LABEL[c.code][LANG]);
+    return `<div class="it ${i===ddAct?'act':''} ${SELECTED.includes(c.code)?'picked':''}" data-i="${i}">
+      <span class="nm">${esc(countryName(c.code))}<small>${esc(sub.join(' · '))}</small></span>${SELECTED.includes(c.code)?'✓ ':''}${badge(c.code)}</div>`;
+  }).join('');
+  ddEl.classList.add('show');
+  ddEl.querySelectorAll('.it').forEach(el=>el.onmousedown=e=>{e.preventDefault();pick(ddItems[+el.dataset.i].code);});
+}
+function moveAct(d){
+  if(!ddItems.length) return; ddAct=(ddAct+d+ddItems.length)%ddItems.length;
+  ddEl.querySelectorAll('.it').forEach((el,i)=>el.classList.toggle('act',i===ddAct));
+  ddEl.querySelector('.it.act')?.scrollIntoView({block:'nearest'});
+}
+function pick(code){ if(!SELECTED.includes(code)) SELECTED.push(code); qEl.value=''; ddEl.classList.remove('show'); qEl.focus(); update(); }
+function toggle(code){ const i=SELECTED.indexOf(code); if(i>=0) SELECTED.splice(i,1); else SELECTED.push(code); update(); }
+qEl.addEventListener('input',renderDD);
+qEl.addEventListener('focus',renderDD);
+qEl.addEventListener('blur',()=>setTimeout(()=>ddEl.classList.remove('show'),120));
+qEl.addEventListener('keydown',e=>{
+  if(e.key==='ArrowDown'){e.preventDefault();moveAct(1);}
+  else if(e.key==='ArrowUp'){e.preventDefault();moveAct(-1);}
+  else if(e.key==='Enter'&&ddAct>=0){e.preventDefault();pick(ddItems[ddAct].code);}
+  else if(e.key==='Escape'){ddEl.classList.remove('show');}
+});
+function renderChips(){
+  document.getElementById('chips').innerHTML=SELECTED.map(c=>`<span class="chip">${esc(pisaName(c))} <button data-c="${c}" aria-label="remove">×</button></span>`).join('');
+  document.querySelectorAll('#chips button').forEach(b=>b.onclick=()=>toggle(b.dataset.c));
+}
+
+/* =====================================================================
+   7) COMPARISON TABLE
+   ===================================================================== */
+function buildRows(){
+  // returns [{dim, label, values:[...per selected + OECD], better:'high'|'low'|null, kind}]
+  const cols=[...SELECTED,'OECD'];
+  const rows=[];
+  for(let i=0;i<4;i++){
+    const dim=t(SUBJ_KEYS[i]);
+    rows.push({dim,label:t('iMean',{y:LATEST}),better:'high',vals:cols.map(c=>score(c,LATEST,i))});
+    rows.push({dim,label:t('iRank',{y:LATEST}),better:'low',vals:cols.map(c=>c==='OECD'?null:rankOf(c,LATEST,i)),
+      show:(v)=>v==null?t('na'):`${v} / ${nOf(LATEST,i)}`});
+    rows.push({dim,label:t('iDiff',{y:LATEST}),better:'high',signed:true,vals:cols.map(c=>c==='OECD'?0:diff(score(c,LATEST,i),score('OECD',LATEST,i)))});
+    rows.push({dim,label:t('iPct',{y:LATEST}),better:'high',vals:cols.map(c=>c==='OECD'?null:pctOf(c,LATEST,i)),show:v=>v==null?t('na'):v+'%'});
+    const earlier=YEARS.filter(y=>y<LATEST).reverse();
+    for(const y of earlier){
+      rows.push({dim,label:t('iMean',{y}),better:'high',vals:cols.map(c=>score(c,y,i))});
+      rows.push({dim,label:t('iRank',{y}),better:'low',vals:cols.map(c=>c==='OECD'?null:rankOf(c,y,i)),show:(v)=>v==null?t('na'):`${v} / ${nOf(y,i)}`});
+    }
+    for(const y of earlier)
+      rows.push({dim,label:t('iChg',{a:y,b:LATEST}),better:'high',signed:true,vals:cols.map(c=>diff(score(c,LATEST,i),score(c,y,i)))});
+  }
+  const dim=t('profile');
+  const strongWeak=(c,fn)=>{ const v=[0,1,2].map(i=>score(c,LATEST,i)); if(v.some(x=>x==null)) return null; const k=fn(...v); return t(SUBJ_KEYS[v.indexOf(k)])+` (${k})`; };
+  rows.push({dim,label:t('iStrong'),text:true,vals:cols.map(c=>strongWeak(c,Math.max))});
+  rows.push({dim,label:t('iWeak'),text:true,vals:cols.map(c=>strongWeak(c,Math.min))});
+  rows.push({dim,label:t('iGap'),better:null,vals:cols.map(c=>{const v=[0,1,2].map(i=>score(c,LATEST,i)); return v.some(x=>x==null)?null:Math.max(...v)-Math.min(...v);})});
+  rows.push({dim,label:t('iOecd'),text:true,vals:cols.map(c=>c==='OECD'?t('na'):(OECD_MEMBERS.includes(c)?t('yes'):t('no')))});
+  rows.push({dim,label:t('iCaution'),text:true,vals:cols.map(c=>c==='OECD'?t('na'):((CAUTION[LATEST]||[]).includes(c)?t('cautionYes'):t('na')))});
+  rows.push({dim,label:t('iLabel'),text:true,vals:cols.map(c=>c==='OECD'?t('oecdAvg'):(hasAny(c)?pisaName(c):t('na')))});
+  return {cols,rows};
+}
+function cellText(r,v){ if(r.text) return v??t('na'); if(r.show) return r.show(v); return r.signed?fmtS(v):fmt(v); }
+function renderTable(){
+  const {cols,rows}=buildRows();
+  const head=`<thead><tr><th class="l">${t('dimension')}</th><th class="l">${t('indicator')}</th>`+
+    cols.map(c=>`<th>${esc(c==='OECD'?t('oecdAvg'):pisaName(c))}</th>`).join('')+`</tr></thead>`;
+  let body='<tbody>'; let lastDim=null;
+  const dimCount={}; rows.forEach(r=>dimCount[r.dim]=(dimCount[r.dim]||0)+1);
+  for(const r of rows){
+    body+='<tr>';
+    if(r.dim!==lastDim){ body+=`<td class="dim" rowspan="${dimCount[r.dim]}">${esc(r.dim)}</td>`; lastDim=r.dim; }
+    body+=`<td class="l">${esc(r.label)}</td>`;
+    let best=null;
+    if(r.better&&SELECTED.length>1){
+      const vs=r.vals.slice(0,SELECTED.length).filter(v=>v!=null);
+      if(vs.length>1) best=r.better==='high'?Math.max(...vs):Math.min(...vs);
+    }
+    r.vals.forEach((v,j)=>{
+      const cls=[r.signed?signCls(v):'', (best!=null&&v===best&&j<SELECTED.length)?'best':''].join(' ');
+      body+=`<td class="${cls}">${esc(cellText(r,v))}</td>`;
+    });
+    body+='</tr>';
+  }
+  body+='</tbody>';
+  document.getElementById('cmpTbl').innerHTML=head+body;
+  document.getElementById('tTblSub').textContent = SELECTED.length===1? `${t('tblSub1')} ${pisaName(SELECTED[0])}` : t('tblSubN',{n:SELECTED.length});
+  renderDesc();
+}
+function renderDesc(){
+  const sums=SELECTED.map(c=>{
+    if(!hasAny(c)) return t('noData',{c:esc(countryName(c))});
+    if(!hasLatest(c)){ const ys=yearsOf(c).join(', '); return t('oldOnly',{c:esc(pisaName(c)),ys}); }
+    const v=[0,1,2].map(i=>score(c,LATEST,i));
+    if(v.some(x=>x==null)) return `<b>${esc(pisaName(c))}</b>: ${t('sci')} ${fmt(v[2])} (${t('rank')} ${rankOf(c,LATEST,2)}/${nOf(LATEST,2)})`;
+    const above=v.filter((x,i)=>x>OECD_AVG[LATEST][i]).length;
+    const cmp= above===3? t('above',{n:3}) : above===0? t('below',{n:3}) : t('mixed',{a:above,b:3-above});
+    let trend;
+    if(PREV==null||[0,1,2].every(i=>score(c,PREV,i)==null)) trend=t('trNo');
+    else trend=[0,1,2].map(i=>{const d=diff(v[i],score(c,PREV,i)); return `${t(SUBJ_KEYS[i])} ${fmtS(d)}`;}).join(', ');
+    const mx=Math.max(...v), mn=Math.min(...v);
+    return t('sumLine',{c:esc(pisaName(c)),avg:fmt(score(c,LATEST,3)),r:`${rankOf(c,LATEST,3)}/${nOf(LATEST,3)}`,m:v[0],rd:v[1],s:v[2],st:t(SUBJ_KEYS[v.indexOf(mx)]),wk:t(SUBJ_KEYS[v.indexOf(mn)]),cmp,trend});
+  });
+  document.getElementById('tblDesc').innerHTML=`<h3>${t('descH')}</h3><p>${t('descDims')}</p>
+   <div>${t('descIdx')}</div><ul>${T[LANG].descList.map(x=>`<li>${x}</li>`).join('')}</ul>
+   ${SELECTED.length>1?`<p class="small muted">${t('descHL')}</p>`:''}
+   <div>${t('descSum')}</div><ul>${sums.map(s=>`<li>${s}</li>`).join('')}</ul>
+   <p class="small muted">${t('rankNote')}</p>`;
+}
+
+/* =====================================================================
+   8) EXCEL EXPORT
+   ===================================================================== */
+function exportExcel(){
+  if(typeof XLSX==='undefined'){alert('Excel library failed to load (check internet connection).');return;}
+  const {cols,rows}=buildRows();
+  const aoa=[[t('dimension'),t('indicator'),...cols.map(c=>c==='OECD'?t('oecdAvg'):pisaName(c))]];
+  rows.forEach(r=>aoa.push([r.dim,r.label,...r.vals.map(v=>{
+    if(v==null) return '';
+    if(r.text) return v;
+    if(r.show) return r.show(v);
+    return v;
+  })]));
+  aoa.push([]); aoa.push([t('foot')]);
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols']=[{wch:18},{wch:40},...cols.map(()=>({wch:22}))];
+  const rk=[[t('rank')+' ('+t(SUBJ_KEYS[SORT])+')',t('country'),t('math'),t('read'),t('sci'),t('avg'),t('chg')+' ('+t(SUBJ_KEYS[SORT])+')']];
+  rankingRows().forEach(c=>rk.push([rankOf(c,LATEST,SORT)??'',pisaName(c),score(c,LATEST,0)??'',score(c,LATEST,1)??'',score(c,LATEST,2)??'',score(c,LATEST,3)??'',diff(score(c,LATEST,SORT),score(c,PREV,SORT))??'']));
+  rk.push(['',t('oecdAvg'),...[0,1,2,3].map(i=>score('OECD',LATEST,i))]);
+  const ws2=XLSX.utils.aoa_to_sheet(rk); ws2['!cols']=[{wch:10},{wch:34},{wch:12},{wch:12},{wch:12},{wch:14},{wch:18}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,t('xlsxSheet1').slice(0,31));
+  XLSX.utils.book_append_sheet(wb,ws2,t('xlsxSheet2').slice(0,31));
+  XLSX.writeFile(wb,`PISA_${LATEST}_${SELECTED.join('-')||'data'}.xlsx`);
+}
+
+/* =====================================================================
+   9) CHARTS
+   ===================================================================== */
+const PALETTE=['#2563eb','#dc2626','#16a34a','#d97706','#7c3aed','#0891b2','#db2777','#65a30d','#ea580c','#475569','#0d9488','#9333ea'];
+const SUBJ_COL=['#2563eb','#d97706','#16a34a','#7c3aed'];
+const OECD_COL='#111827';
+const alpha=(hex,a)=>{const n=parseInt(hex.slice(1),16);return `rgba(${n>>16},${(n>>8)&255},${n&255},${a})`;};
+const bgPlugin={id:'whiteBg',beforeDraw(ch){const c=ch.ctx;c.save();c.globalCompositeOperation='destination-over';c.fillStyle='#fff';c.fillRect(0,0,ch.width,ch.height);c.restore();}};
+if(window.Chart){ Chart.register(ChartDataLabels, bgPlugin); Chart.defaults.font.family="'Sarabun',system-ui,sans-serif"; Chart.defaults.color='#334155'; }
+
+function lastIdx(arr){ for(let i=arr.length-1;i>=0;i--){const v=arr[i]; if(v!=null&&!(typeof v==='object'&&v.y==null&&v.x==null)) return i;} return -1; }
+function lblDisplay(id){
+  return ctx=>{
+    const st=LBL[id]; const i=ctx.dataIndex; const data=ctx.dataset.data; const v=data[i];
+    if(v==null) return false;
+    switch(st.mode){
+      case 'none': return false;
+      case 'all': return true;
+      case 'every': return i % Math.max(1,st.n|0) === 0;
+      case 'latest': return i===lastIdx(data);
+    }
+    return false;
+  };
+}
+function baseDL(id,extra={}){
+  return Object.assign({display:lblDisplay(id),color:'#0f172a',font:{weight:'600',size:11},anchor:'end',align:'end',clamp:true,
+    formatter:v=>typeof v==='number'?(Number.isInteger(v)?v:v.toFixed(1)):v},extra);
+}
+const withData=()=>SELECTED.filter(hasLatest);
+const colFor=c=>PALETTE[SELECTED.indexOf(c)%PALETTE.length];
+
+const CHART_DEFS=[
+ {id:'c1', lbl:'all', build(id){
+   const cs=withData(); if(!cs.length) return null;
+   const ds=cs.map(c=>({label:pisaName(c),data:[0,1,2].map(i=>score(c,LATEST,i)),backgroundColor:colFor(c)}));
+   ds.push({label:t('oecdAvg'),data:[0,1,2].map(i=>score('OECD',LATEST,i)),backgroundColor:alpha(OECD_COL,.55)});
+   return {type:'bar',data:{labels:[0,1,2].map(i=>t(SUBJ_KEYS[i])),datasets:ds},
+     options:{scales:{y:{beginAtZero:false,suggestedMin:250,title:{display:true,text:t('score')}}},plugins:{datalabels:baseDL(id)}}};
+ }},
+ {id:'c2', lbl:'none', build(id){
+   const cs=withData(); if(!cs.length) return null;
+   const ds=cs.map(c=>({label:pisaName(c),data:[0,1,2,3].map(i=>score(c,LATEST,i)),borderColor:colFor(c),backgroundColor:alpha(colFor(c),.15),pointRadius:3}));
+   ds.push({label:t('oecdAvg'),data:[0,1,2,3].map(i=>score('OECD',LATEST,i)),borderColor:OECD_COL,borderDash:[5,4],backgroundColor:'transparent',pointRadius:2});
+   return {type:'radar',data:{labels:[0,1,2,3].map(i=>t(SUBJ_KEYS[i])),datasets:ds},
+     options:{scales:{r:{suggestedMin:250,suggestedMax:620}},plugins:{datalabels:baseDL(id,{anchor:'end',align:'top',font:{size:10,weight:'600'}})}}};
+ }},
+ {id:'c3', lbl:'latest', extra:{key:'subj',def:'3'}, build(id){
+   const cs=SELECTED.filter(hasAny); if(!cs.length) return null;
+   const i=+EXTRA[id];
+   const ds=cs.map(c=>({label:pisaName(c),data:YEARS.map(y=>score(c,y,i)),borderColor:colFor(c),backgroundColor:colFor(c),tension:.25,spanGaps:true,pointRadius:4}));
+   ds.push({label:t('oecdAvg'),data:YEARS.map(y=>score('OECD',y,i)),borderColor:OECD_COL,borderDash:[6,4],backgroundColor:OECD_COL,pointRadius:3});
+   return {type:'line',data:{labels:YEARS.map(String),datasets:ds},
+     options:{scales:{y:{title:{display:true,text:t('score')+' — '+t(SUBJ_KEYS[i])}}},plugins:{datalabels:baseDL(id,{align:'top'})}}};
+ }},
+ {id:'c4', lbl:'all', build(id){
+   const cs=withData(); if(!cs.length) return null;
+   const ds=[0,1,2,3].map(i=>({label:t(SUBJ_KEYS[i]),data:cs.map(c=>diff(score(c,LATEST,i),score('OECD',LATEST,i))),backgroundColor:SUBJ_COL[i]}));
+   return {type:'bar',data:{labels:cs.map(pisaName),datasets:ds},
+     options:{indexAxis:'y',scales:{x:{title:{display:true,text:t('diffAx')}}},plugins:{datalabels:baseDL(id,{formatter:v=>fmtS(v)})}}};
+ }},
+ {id:'c5', lbl:'all', extra:{key:'period',def:'prev'}, build(id){
+   const cs=withData(); const from=+EXTRA[id];
+   const ok=cs.filter(c=>score(c,from,0)!=null||score(c,from,2)!=null); if(!ok.length) return null;
+   const ds=ok.map(c=>({label:pisaName(c),data:[0,1,2,3].map(i=>diff(score(c,LATEST,i),score(c,from,i))),backgroundColor:colFor(c)}));
+   ds.push({label:t('oecdAvg'),data:[0,1,2,3].map(i=>diff(score('OECD',LATEST,i),score('OECD',from,i))),backgroundColor:alpha(OECD_COL,.55)});
+   return {type:'bar',data:{labels:[0,1,2,3].map(i=>t(SUBJ_KEYS[i])),datasets:ds},
+     options:{scales:{y:{title:{display:true,text:t('chgAx')+` (${from}→${LATEST})`}}},plugins:{datalabels:baseDL(id,{formatter:v=>fmtS(v)})}}};
+ }},
+ {id:'c6', lbl:'every', n:10, wide:true, extra:{key:'subj',def:'2'}, build(id){
+   const i=+EXTRA[id];
+   const codes=participants(LATEST,i).sort((a,b)=>score(b,LATEST,i)-score(a,LATEST,i));
+   const data=codes.map(c=>score(c,LATEST,i));
+   const bg=codes.map(c=>SELECTED.includes(c)?'#f97316':alpha('#2563eb',.35));
+   return {type:'bar',height:Math.max(420,codes.length*15),data:{labels:codes.map((c,k)=>`${rankOf(c,LATEST,i)}. ${pisaName(c)}`),datasets:[{label:t(SUBJ_KEYS[i]),data,backgroundColor:bg}]},
+     options:{indexAxis:'y',scales:{x:{suggestedMin:250},y:{ticks:{autoSkip:false,font:{size:10}}}},plugins:{legend:{display:false},datalabels:baseDL(id,{font:{size:9,weight:'600'}})}}};
+ }},
+ {id:'c7', lbl:'all', build(id){
+   const all=Object.keys(DATA).filter(c=>score(c,LATEST,0)!=null&&score(c,LATEST,1)!=null);
+   const ds=[{label:t('others'),data:all.filter(c=>!SELECTED.includes(c)).map(c=>({x:score(c,LATEST,0),y:score(c,LATEST,1),c})),backgroundColor:alpha('#64748b',.35),pointRadius:4,datalabels:{display:false}}];
+   SELECTED.filter(c=>all.includes(c)).forEach(c=>ds.push({label:pisaName(c),data:[{x:score(c,LATEST,0),y:score(c,LATEST,1),c}],backgroundColor:colFor(c),pointRadius:8}));
+   ds.push({label:t('oecdAvg'),data:[{x:score('OECD',LATEST,0),y:score('OECD',LATEST,1)}],backgroundColor:OECD_COL,pointStyle:'rectRot',pointRadius:9});
+   return {type:'scatter',data:{datasets:ds},
+     options:{scales:{x:{title:{display:true,text:t('math')}},y:{title:{display:true,text:t('read')}}},
+       plugins:{tooltip:{callbacks:{label:ctx=>`${ctx.raw.c?pisaName(ctx.raw.c):ctx.dataset.label}: (${ctx.raw.x}, ${ctx.raw.y})`}},
+         datalabels:baseDL(id,{align:'right',offset:6,formatter:(v,ctx)=>`${ctx.dataset.label} (${v.x}, ${v.y})`})}}};
+ }},
+ {id:'c8', lbl:'all', build(id){
+   const cs=withData().filter(c=>score(c,LATEST,3)!=null); if(!cs.length) return null;
+   const labs=[...cs.map(pisaName),t('oecdAvg')];
+   const ds=[0,1,2].map(i=>({label:t(SUBJ_KEYS[i]),data:[...cs.map(c=>score(c,LATEST,i)),score('OECD',LATEST,i)],backgroundColor:SUBJ_COL[i]}));
+   return {type:'bar',data:{labels:labs,datasets:ds},
+     options:{scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:t('score')}}},plugins:{datalabels:baseDL(id,{anchor:'center',align:'center',color:'#fff'})}}};
+ }},
+ {id:'c9', lbl:'all', build(id){
+   const cs=withData().filter(c=>score(c,LATEST,3)!=null); if(!cs.length) return null;
+   const cols=[...cs.map(colFor),OECD_COL];
+   return {type:'polarArea',data:{labels:[...cs.map(pisaName),t('oecdAvg')],datasets:[{data:[...cs.map(c=>score(c,LATEST,3)),score('OECD',LATEST,3)],backgroundColor:cols.map(c=>alpha(c,.6)),borderColor:cols}]},
+     options:{scales:{r:{suggestedMin:250}},plugins:{datalabels:baseDL(id,{anchor:'center',align:'center',color:'#0f172a'})}}};
+ }}
+];
+
+function buildChartsShell(){
+  const host=document.getElementById('charts');
+  Object.values(CHARTS).forEach(c=>c.destroy()); for(const k in CHARTS) delete CHARTS[k];
+  host.innerHTML='';
+  for(const d of CHART_DEFS){
+    if(!LBL[d.id]) LBL[d.id]={mode:d.lbl,n:d.n||10};
+    if(d.extra&&EXTRA[d.id]==null) EXTRA[d.id]=d.extra.def;
+    if(d.extra?.key==='period' && !YEARS.filter(y=>y<LATEST).map(String).includes(EXTRA[d.id])) EXTRA[d.id]=String(PREV);
+    const card=document.createElement('div'); card.className='cc'+(d.wide?' wide':'');
+    let extraHtml='';
+    if(d.extra?.key==='subj') extraHtml=`<label>${t('subj')} <select data-x>${[0,1,2,3].map(i=>`<option value="${i}" ${String(i)===EXTRA[d.id]?'selected':''}>${t(SUBJ_KEYS[i])}</option>`).join('')}</select></label>`;
+    if(d.extra?.key==='period') extraHtml=`<label>${t('period')} <select data-x>${YEARS.filter(y=>y<LATEST).reverse().map(y=>`<option value="${y}" ${String(y)===EXTRA[d.id]?'selected':''}>${y} → ${LATEST}</option>`).join('')}</select></label>`;
+    const st=LBL[d.id];
+    card.innerHTML=`<h3>${t(d.id)}</h3><p>${t(d.id+'d')}</p>
+      <div class="cc-ctrl">${extraHtml}
+        <label>${t('lbl')} <select data-m>
+          <option value="none">${t('lNone')}</option><option value="all">${t('lAll')}</option>
+          <option value="every">${t('lEvery')}</option><option value="latest">${t('lLatest')}</option></select></label>
+        <label data-nwrap class="${st.mode==='every'?'':'hidden'}">${t('nLbl')} <input type="number" min="1" max="100" value="${st.n}" data-n></label>
+        <button class="btn sm" data-png>⬇ ${t('png')}</button>
+      </div>
+      <div class="cc-body"><canvas></canvas></div>`;
+    host.appendChild(card);
+    card.querySelector('[data-m]').value=st.mode;
+    card.querySelector('[data-m]').onchange=e=>{st.mode=e.target.value;card.querySelector('[data-nwrap]').classList.toggle('hidden',st.mode!=='every');CHARTS[d.id]?.update();};
+    card.querySelector('[data-n]').oninput=e=>{st.n=Math.max(1,+e.target.value||1);CHARTS[d.id]?.update();};
+    const xs=card.querySelector('[data-x]'); if(xs) xs.onchange=e=>{EXTRA[d.id]=e.target.value;drawChart(d,card);};
+    card.querySelector('[data-png]').onclick=()=>{
+      const ch=CHARTS[d.id]; if(!ch) return;
+      const a=document.createElement('a'); a.href=ch.toBase64Image('image/png',1);
+      a.download=`PISA_${d.id}_${t(d.id).replace(/[^\p{L}\p{M}\p{N}]+/gu,'_')}.png`; a.click();
+    };
+    drawChart(d,card);
+  }
+}
+function drawChart(d,card){
+  CHARTS[d.id]?.destroy(); delete CHARTS[d.id];
+  const body=card.querySelector('.cc-body');
+  const cfg=d.build(d.id);
+  if(!cfg){ body.style.height='auto'; body.innerHTML=`<div class="empty">${t('needData')}</div>`; card.querySelector('[data-png]').disabled=true; return; }
+  card.querySelector('[data-png]').disabled=false;
+  body.innerHTML='<canvas></canvas>';
+  body.style.height=(cfg.height||360)+'px';
+  cfg.options=Object.assign({responsive:true,maintainAspectRatio:false,layout:{padding:{top:14,right:28}}},cfg.options);
+  cfg.options.plugins=Object.assign({title:{display:true,text:t(d.id),font:{size:14,weight:'700'}},legend:{position:'bottom'}},cfg.options.plugins);
+  CHARTS[d.id]=new Chart(body.querySelector('canvas'),cfg);
+}
+
+/* =====================================================================
+   10) RENDER / LANGUAGE / RESET
+   ===================================================================== */
+function renderStatic(){
+  document.documentElement.lang=LANG;
+  const set=(id,k)=>{const el=document.getElementById(id); if(el) el.innerHTML=t(k);};
+  set('tTitle','title');set('tSub','sub');set('tReset','reset');set('tRankH','rankH');set('tRankSub','rankSub');
+  set('tSortBy','sortBy');set('tRankHint','rankHint');set('tRankNote','rankNote');set('tPickH','pickH');set('tPickSub','pickSub');
+  set('tTblH','tblH');set('tXlsx','xlsx');set('tChH','chH');set('tChSub','chSub');set('tFoot','foot');
+  set('tImpH','impH');set('tImpSub','impSub');set('tImpBtn','impBtn');set('tTplBtn','tplBtn');
+  document.getElementById('btnClearImp').textContent=t('clearImp');
+  document.getElementById('btnClearImp').disabled=!IMPORTED.length;
+  renderImpInfo();
+  document.getElementById('tCharts').textContent=chartsVisible?t('hideCharts'):t('charts');
+  qEl.placeholder=t('ph'); document.getElementById('btnClear').textContent=t('clear');
+  document.getElementById('lnTh').classList.toggle('on',LANG==='th'); document.getElementById('lnEn').classList.toggle('on',LANG==='en');
+  document.title=LANG==='th'?'PISA Explorer — คะแนน PISA':'PISA Explorer';
+}
+function update(){
+  renderChips(); renderRanking();
+  const has=SELECTED.length>0;
+  document.getElementById('secTable').classList.toggle('hidden',!has);
+  if(has) renderTable();
+  if(!has){ chartsVisible=false; }
+  document.getElementById('secCharts').classList.toggle('hidden',!chartsVisible);
+  document.getElementById('tCharts').textContent=chartsVisible?t('hideCharts'):t('charts');
+  if(chartsVisible) buildChartsShell();
+  if(ddEl.classList.contains('show')) renderDD();
+}
+function renderAll(){ renderStatic(); renderStats(); renderSortSel(); update(); }
+function setLang(l){ LANG=l; renderAll(); }
+document.getElementById('lnTh').onclick=()=>setLang('th');
+document.getElementById('lnEn').onclick=()=>setLang('en');
+document.getElementById('sortSel').onchange=e=>{SORT=+e.target.value;renderRanking();};
+document.getElementById('btnClear').onclick=()=>{SELECTED=[];update();};
+document.getElementById('btnXlsx').onclick=exportExcel;
+document.getElementById('btnCharts').onclick=()=>{
+  if(!window.Chart){alert('Chart library failed to load (check internet connection).');return;}
+  chartsVisible=!chartsVisible; update();
+  if(chartsVisible) document.getElementById('secCharts').scrollIntoView({behavior:'smooth'});
+};
+document.getElementById('btnReset').onclick=()=>{
+  SELECTED=[]; SORT=2; chartsVisible=false; qEl.value='';
+  for(const k in LBL) delete LBL[k]; for(const k in EXTRA) delete EXTRA[k];
+  Object.values(CHARTS).forEach(c=>c.destroy()); for(const k in CHARTS) delete CHARTS[k];
+  document.getElementById('charts').innerHTML='';
+  renderAll(); window.scrollTo({top:0,behavior:'smooth'});
+};
+
+/* =====================================================================
+   11) IMPORT NEW CYCLES (Excel / CSV)
+   ===================================================================== */
+let lastImpMsg = '';
+const normName = s => String(s??'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')
+  .replace(/\*/g,'').replace(/[“”"']/g,'').replace(/\s+/g,' ').trim();
+let NAME_IDX = null;
+function nameIndex(){
+  if(NAME_IDX) return NAME_IDX;
+  NAME_IDX = {};
+  const add=(n,c)=>{ const k=normName(n); if(k && !NAME_IDX[k]) NAME_IDX[k]=c; };
+  for(const c of COUNTRY_LIST){ add(c.en,c.code); add(c.code,c.code); add(thName(c.code),c.code); try{ if(dnEn) add(dnEn.of(c.code),c.code);}catch(e){} }
+  for(const c in PISA_LABEL){ add(PISA_LABEL[c].en,c); add(PISA_LABEL[c].th,c); }
+  const alias={ 'oecd':'OECD','oecd average':'OECD','oecd avg':'OECD','ค่าเฉลี่ย oecd':'OECD',
+    'korea':'KR','republic of korea':'KR','south korea':'KR','turkey':'TR','turkiye':'TR','czech republic':'CZ','slovak republic':'SK',
+    'vietnam':'VN','viet nam':'VN','russian federation':'RU','united states of america':'US','usa':'US','uk':'GB',
+    'b-s-j-z (china)':'CN','b-s-j-g (china)':'CN','beijing-shanghai-jiangsu-zhejiang (china)':'CN','chinese taipei':'TW',
+    'hong kong (china)':'HK','hong kong sar':'HK','macao (china)':'MO','macau':'MO','macau (china)':'MO','brunei':'BN',
+    'baku (azerbaijan)':'AZ','republic of moldova':'MD','moldova, republic of':'MD','republic of north macedonia':'MK','fyrom':'MK',
+    'palestinian authority':'PS','kurdistan region (iraq)':'IQ','dushanbe (tajikistan)':'TJ','kosovo':'XK','laos':'LA','lao pdr':'LA',
+    'iran, islamic republic of':'IR','cote divoire':'CI','swaziland':'SZ','holland':'NL' };
+  for(const k in alias) NAME_IDX[k]=alias[k];
+  return NAME_IDX;
+}
+function resolveCountry(codeVal,nameVal){
+  const idx=nameIndex();
+  if(codeVal!=null && String(codeVal).trim()){
+    const c=String(codeVal).trim().toUpperCase();
+    if(c==='OECD'||EN_MAP[c]) return c;
+    if(idx[normName(codeVal)]) return idx[normName(codeVal)];
+  }
+  if(nameVal==null) return null;
+  const n=normName(nameVal); if(!n) return null;
+  if(idx[n]) return idx[n];
+  if(n.startsWith('ukrainian')) return 'UA';
+  if(n.startsWith('oecd')) return 'OECD';
+  const stripped=n.replace(/\s*\(.*\)\s*$/,'').trim();   // "Something (Region)" → "Something"
+  return idx[stripped]||null;
+}
+function pickCol(headers, keys){
+  const H=headers.map(h=>normName(h).replace(/[^a-z0-9฀-๿]/g,''));
+  for(const k of keys){ const i=H.findIndex(h=>h===k); if(i>=0) return headers[i]; }
+  for(const k of keys){ const i=H.findIndex(h=>h.startsWith(k)); if(i>=0) return headers[i]; }
+  return null;
+}
+const toNum = v => { if(v==null) return null; const s=String(v).replace(',', '.').replace(/[^\d.\-]/g,''); if(!s) return null; const n=+s; return isFinite(n)&&n>0? Math.round(n*10)/10 : null; };
+
+function parseRows(rows){
+  if(!rows.length) return {ok:[],skip:[]};
+  const headers=Object.keys(rows.reduce((a,r)=>Object.assign(a,r),{}));
+  const cYear=pickCol(headers,['year','ปี','cycle','รอบ']);
+  const cCode=pickCol(headers,['code','iso','iso2','cnt','รหัส']);
+  const cName=pickCol(headers,['country','countryeconomy','economy','name','ประเทศ','ชื่อ']);
+  const cM=pickCol(headers,['mathematics','math','maths','คณิตศาสตร์','คณิต']);
+  const cR=pickCol(headers,['reading','read','การอ่าน','อ่าน']);
+  const cS=pickCol(headers,['science','sci','วิทยาศาสตร์','วิทย์']);
+  const cC=pickCol(headers,['caution','flag','หมายเหตุ','ข้อควรระวัง']);
+  if(!(cM||cR||cS) || !(cCode||cName)) return {ok:[],skip:[],bad:true};
+  let defYear=null;
+  if(!cYear){ const a=prompt(t('impAskYear'), String((LATEST||2025)+4)); defYear=parseInt(a,10); if(!defYear) return {ok:[],skip:[],cancel:true}; }
+  const ok=[], skip=[];
+  for(const r of rows){
+    const year = cYear? parseInt(r[cYear],10) : defYear;
+    const v=[toNum(cM&&r[cM]),toNum(cR&&r[cR]),toNum(cS&&r[cS])];
+    if(!year || year<2000 || year>2100 || v.every(x=>x==null)) continue;
+    const code=resolveCountry(cCode&&r[cCode], cName&&r[cName]);
+    if(!code){ skip.push(String((cName&&r[cName])||(cCode&&r[cCode])||'?')); continue; }
+    const caution = cC? /^(y|yes|true|1|\*|ใช่|x)$/i.test(String(r[cC]??'').trim()) : false;
+    ok.push({year,code,v,caution});
+  }
+  return {ok,skip};
+}
+function handleFile(file){
+  if(typeof XLSX==='undefined'){ alert('Excel library failed to load (check internet connection).'); return; }
+  const fr=new FileReader();
+  fr.onload=e=>{
+    let rows=[];
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      // use the first sheet that yields usable rows
+      let res=null;
+      for(const sn of wb.SheetNames){
+        rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{defval:null,raw:true});
+        const probe=Object.keys(rows[0]||{}).map(h=>normName(h));
+        if(probe.some(h=>/math|read|scien|คณิต|อ่าน|วิทย/.test(h))){ res=parseRows(rows); break; }
+      }
+      if(!res) res={ok:[],skip:[],bad:true};
+      if(res.cancel) return;
+      if(!res.ok.length){ lastImpMsg=`<span class="neg">${t('impNoRows')}</span>`; renderImpInfo(); return; }
+      // replace same (year, code) pairs
+      const key=r=>r.year+'|'+r.code;
+      const newKeys=new Set(res.ok.map(key));
+      IMPORTED=IMPORTED.filter(r=>!newKeys.has(key(r))).concat(res.ok);
+      const stored=saveImports();
+      rebuildData();
+      const ys=[...new Set(res.ok.map(r=>r.year))].sort();
+      const msgs=[`<span class="pos">✓ ${t('impOk',{n:res.ok.length,ys:ys.join(', ')})}</span>`];
+      ys.forEach(y=>{ if(OECD_AVG[y]?.estimated) msgs.push(t('impEst',{y})); });
+      if(res.skip.length) msgs.push(`<span class="neg">${t('impSkip',{n:res.skip.length,list:esc(res.skip.slice(0,15).join(', '))+(res.skip.length>15?' …':'')})}</span>`);
+      if(!stored) msgs.push(t('impNoStore'));
+      lastImpMsg=msgs.join('<br>');
+      renderAll();
+    }catch(err){ lastImpMsg=`<span class="neg">Error: ${esc(err.message)}</span>`; renderImpInfo(); }
+  };
+  fr.readAsArrayBuffer(file);
+}
+function renderImpInfo(){
+  const el=document.getElementById('impInfo'); if(!el) return;
+  const ys=[...new Set(IMPORTED.map(r=>r.year))].sort();
+  const status = IMPORTED.length? t('impHave',{n:IMPORTED.length,ys:ys.join(', ')}) : t('impNone');
+  el.innerHTML = (lastImpMsg? `<div style="margin-bottom:8px">${lastImpMsg}</div>`:'') + `<div><b>${status}</b></div><div style="margin-top:6px">${t('impHow')}</div>`;
+}
+function downloadTemplate(){
+  if(typeof XLSX==='undefined'){ alert('Excel library failed to load (check internet connection).'); return; }
+  const ny=(LATEST||2025)+4;
+  const head=['Year','Code','Country','Mathematics','Reading','Science','Caution'];
+  const codes=Object.keys(DATA).filter(c=>hasLatest(c)).sort((a,b)=>(EN_MAP[a]||a).localeCompare(EN_MAP[b]||b));
+  const fill=[head,[ny,'OECD','OECD average','','','',''],...codes.map(c=>[ny,c,PISA_LABEL[c]?.en||EN_MAP[c]||c,'','','',''])];
+  const all=[head];
+  for(const y of [...YEARS].reverse()){
+    if(OECD_AVG[y]) all.push([y,'OECD','OECD average',...OECD_AVG[y].slice(0,3),'']);
+    Object.keys(DATA).filter(c=>DATA[c][y]).sort().forEach(c=>all.push([y,c,PISA_LABEL[c]?.en||EN_MAP[c]||c,...DATA[c][y].map(v=>v??''),(CAUTION[y]||[]).includes(c)?'Y':'']));
+  }
+  const help=[[t('impH')],[],[t('impHow').replace(/<[^>]+>/g,'')],[],
+    [LANG==='th'?'ขั้นตอน':'Steps'],
+    [LANG==='th'?`1) เปิดชีต "${t('tplSheet')}" แล้วแก้ปีในคอลัมน์ Year ถ้าจำเป็น (ค่าเริ่มต้น ${ny})`:`1) Open the "${t('tplSheet')}" sheet and change the Year column if needed (default ${ny})`],
+    [LANG==='th'?'2) กรอกคะแนน Mathematics / Reading / Science จากรายงาน OECD (แถวไหนไม่มีข้อมูลให้เว้นว่าง)':'2) Fill in Mathematics / Reading / Science from the OECD report (leave blank where not reported)'],
+    [LANG==='th'?'3) เพิ่มแถวประเทศใหม่ได้ ใส่รหัส 2 ตัวอักษร หรือชื่อประเทศภาษาอังกฤษ':'3) You can add new countries: use the 2-letter code or the English country name'],
+    [LANG==='th'?'4) บันทึกไฟล์ แล้วกด "นำเข้าข้อมูล" ในหน้าเว็บ':'4) Save the file and click "Import data" on the page'],
+    [LANG==='th'?`ชีต "${t('tplAll')}" คือข้อมูลทั้งหมดที่มีอยู่ตอนนี้ ใช้เป็นตัวอย่างรูปแบบได้`:`The "${t('tplAll')}" sheet holds all current data and shows the expected format`]];
+  const wb=XLSX.utils.book_new();
+  const ws1=XLSX.utils.aoa_to_sheet(fill); ws1['!cols']=[{wch:8},{wch:8},{wch:32},{wch:13},{wch:11},{wch:11},{wch:9}];
+  const ws2=XLSX.utils.aoa_to_sheet(all); ws2['!cols']=ws1['!cols'];
+  const ws3=XLSX.utils.aoa_to_sheet(help); ws3['!cols']=[{wch:110}];
+  XLSX.utils.book_append_sheet(wb,ws1,t('tplSheet'));
+  XLSX.utils.book_append_sheet(wb,ws2,t('tplAll'));
+  XLSX.utils.book_append_sheet(wb,ws3,t('tplHelp'));
+  XLSX.writeFile(wb,`PISA_template_${ny}.xlsx`);
+}
+const fileIn=document.getElementById('fileIn');
+document.getElementById('btnImport').onclick=()=>fileIn.click();
+fileIn.onchange=()=>{ if(fileIn.files[0]) handleFile(fileIn.files[0]); fileIn.value=''; };
+document.getElementById('btnTemplate').onclick=downloadTemplate;
+document.getElementById('btnClearImp').onclick=()=>{
+  if(!confirm(t('impConfirmClear'))) return;
+  IMPORTED=[]; saveImports(); try{localStorage.removeItem(STORE_KEY);}catch(e){}
+  lastImpMsg=''; rebuildData(); renderAll();
+};
+
+loadImports();
+rebuildData();
+renderAll();
+</script>
+</body>
+</html>
